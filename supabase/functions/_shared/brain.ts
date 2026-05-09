@@ -17,8 +17,8 @@ export async function interpretCommand(text: string, engine = 'gemini', currentD
   
   Regole:
   1. Capisci l'intento tra: add_event, add_note, query_events, query_notes, delete_event, delete_note, update_event, update_note, general_answer.
-  2. Estrai date e orari in formato ISO 8601. Risolvi riferimenti relativi come "domani", "lunedì prossimo", ecc.
-  3. Se l'utente vuole modificare qualcosa (es. "sposta", "cambia", "rinomina"), usa "update_event" o "update_note" e metti il titolo dell'elemento da cambiare in "old_title".
+  2. Estrai date e orari in formato ISO 8601 usando SEMPRE il fuso orario 'Europe/Rome' (UTC+2 in estate). Se l'utente dice "alle 9:00", intende le 09:00 italiane.
+  3. Per la modifica: se l'utente vuole spostare o cambiare un evento, usa "update_event" e metti il titolo originale in "old_title".
   4. Rispondi in modo naturale e umano nel campo "response".
   
   Schema JSON atteso:
