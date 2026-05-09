@@ -32,7 +32,7 @@ function App() {
       setResponse(finalResponse)
       speak(finalResponse)
       
-      setHistory(prev => [{ text, response: finalResponse }, ...prev].slice(0, 5))
+      setHistory(prev => [{ text, response: finalResponse }, ...prev].slice(0, 15))
     } catch (error) {
       console.error('Errore:', error)
       setResponse('Scusa, ho avuto un problema tecnico.')
@@ -87,7 +87,7 @@ function App() {
             </header>
 
             {/* Mic Section */}
-            <div className="flex-1 flex flex-col items-center justify-center gap-12 w-full">
+            <div className="flex-1 flex flex-col items-center justify-center gap-12 w-full min-h-[40vh]">
               <MicButton 
                 isListening={isListening}
                 isProcessing={isProcessing}
@@ -99,28 +99,63 @@ function App() {
               <div className="h-20 text-center px-4 w-full">
                 <AnimatePresence mode="wait">
                   {isListening ? (
-                    <motion.p key="tr" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-neon-cyan text-lg italic">
-                      "{transcript || 'Ascolto...'}"
+                    <motion.p key="tr" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-neon-cyan text-lg italic font-light">
+                      "{transcript || 'Ti ascolto...'}"
                     </motion.p>
-                  ) : response ? (
-                    <motion.p key="res" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-serif text-xl">
-                      {response}
-                    </motion.p>
+                  ) : isProcessing ? (
+                    <motion.div 
+                      key="proc" 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }}
+                      className="flex flex-col items-center gap-2"
+                    >
+                      <p className="text-text-tertiary text-xs uppercase tracking-[0.2em]">Will sta pensando...</p>
+                      <div className="flex gap-1">
+                        {[0, 1, 2].map(i => (
+                          <motion.div 
+                            key={i}
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                            className="w-1.5 h-1.5 rounded-full bg-neon-violet"
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
                   ) : (
-                    <p className="text-sm opacity-40 uppercase tracking-widest">Tieni premuto per parlare</p>
+                    <motion.p key="idle" initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} className="text-sm uppercase tracking-widest">
+                      Tieni premuto per parlare
+                    </motion.p>
                   )}
                 </AnimatePresence>
               </div>
             </div>
 
-            {/* Recent History */}
-            <div className="w-full mt-auto space-y-4">
-              {history.map((item, i) => (
-                <GlassCard key={i} delay={i * 0.1} className="p-4 bg-white/2">
-                  <p className="text-xs text-text-secondary italic mb-1">"{item.text}"</p>
-                  <p className="text-sm">{item.response}</p>
-                </GlassCard>
-              ))}
+            {/* Conversation Chat History */}
+            <div className="w-full max-w-md mt-auto space-y-4 pb-12 overflow-y-auto max-h-[40vh] px-2 scrollbar-hide">
+              <AnimatePresence initial={false}>
+                {history.map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    className={`flex flex-col ${i === 0 ? 'opacity-100' : 'opacity-60'}`}
+                  >
+                    {/* User Message */}
+                    <div className="self-end max-w-[80%] mb-2">
+                      <div className="px-4 py-2 rounded-2xl rounded-tr-none bg-white/5 border border-white/10 text-sm text-text-secondary italic">
+                        {item.text}
+                      </div>
+                    </div>
+                    
+                    {/* Assistant Response */}
+                    <div className="self-start max-w-[90%]">
+                      <GlassCard className={`p-4 border-l-2 ${i === 0 ? 'border-l-neon-cyan shadow-glow-cyan/20' : 'border-l-white/20'}`}>
+                        <p className="text-sm leading-relaxed">{item.response}</p>
+                      </GlassCard>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </motion.main>
         ) : view === 'calendar' ? (

@@ -54,7 +54,7 @@ serve(async (req) => {
     if (!textToProcess) return new Response("No text", { status: 200 })
 
     // Elaborazione Brain
-    const interpreted = await interpretCommand(textToProcess)
+    const interpreted = await interpretCommand(supabase, textToProcess)
     interpreted.input_text = textToProcess
     const responseText = await executeIntent(supabase, interpreted, 'telegram')
 

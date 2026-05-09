@@ -1,7 +1,12 @@
 import { eventsService, notesService, conversationsService } from '../services/database';
 
 export async function executeIntent(interpreted) {
-  const { intent, data, response } = interpreted;
+  const { type, intent, data, response } = interpreted;
+
+  // Se è una semplice conversazione, non facciamo nulla sul DB e ritorniamo la risposta
+  if (type === 'conversation') {
+    return response;
+  }
 
   try {
     switch (intent) {
@@ -10,6 +15,7 @@ export async function executeIntent(interpreted) {
           title: data.title || 'Nuovo Evento',
           start_date: data.start_date,
           end_date: data.end_date,
+          all_day: data.all_day ?? false,
           location: data.location,
           description: data.description,
           source: 'app'
@@ -19,47 +25,22 @@ export async function executeIntent(interpreted) {
       case 'add_note':
         await notesService.create({
           title: data.title || 'Nuova Nota',
-          content: data.description || data.title,
+          content: data.content || data.description || data.title,
           source: 'app'
         });
         break;
 
-      case 'query_events': {
-        const events = await eventsService.getAll();
-        if (events && events.length > 0) {
-          const list = events.map(e => {
-            const start = new Date(e.start_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
-            const end = e.end_date ? new Date(e.end_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
-            
-            if (end && end !== start) {
-              return `📅 ${e.title} - dal ${start} al ${end}`;
-            }
-            return `📅 ${e.title} - il ${start}`;
-          }).join('\n');
-          return `Certamente! Ecco i tuoi impegni:\n\n${list}`;
-        }
-        return "Non ho trovato eventi nel tuo calendario. 📭";
-      }
-
-      case 'query_notes': {
-        const notes = await notesService.getAll();
-        if (notes && notes.length > 0) {
-          const list = notes.map(n => `📝 ${n.title}\n${n.content}`).join('\n\n');
-          return `Ecco le tue note salvate:\n\n${list}`;
-        }
-        return "Non ho trovato note salvate. 📭";
-      }
-
       case 'delete_event':
-        await eventsService.deleteByTitle(data.title);
-        return response; // Usiamo la risposta di conferma di Gemini
+        await eventsService.deleteByTitle(data.search_query || data.title);
+        break;
 
       case 'delete_note':
-        await notesService.deleteByTitle(data.title);
-        return response;
+        await notesService.deleteByTitle(data.search_query || data.title);
+        break;
 
       case 'update_event': {
-        const searchTitle = data.old_title || data.title;
+        const searchTitle = data.search_query || data.old_title || data.title;
+        // Importante: qui usiamo direttamente Supabase per la flessibilità della query ilike
         const { error } = await supabase
           .from('events')
           .update({
@@ -72,38 +53,42 @@ export async function executeIntent(interpreted) {
           })
           .ilike('title', `%${searchTitle}%`);
         if (error) throw error;
-        return response;
+        break;
       }
 
       case 'update_note': {
-        const searchTitle = data.old_title || data.title;
+        const searchTitle = data.search_query || data.old_title || data.title;
         const { error } = await supabase
           .from('notes')
           .update({
             title: data.title,
-            content: data.description || data.title
+            content: data.content || data.description || data.title
           })
           .ilike('title', `%${searchTitle}%`);
         if (error) throw error;
-        return response;
+        break;
       }
 
       default:
-        // general_answer o altri intent non gestiti
+        // Intent non mappati o query (gestite dalla conversazione)
         break;
     }
 
-    // Logghiamo la conversazione
-    await conversationsService.log({
-      input_text: interpreted.input_text || '', // Dovremo passarlo
-      input_source: 'text',
-      intent: intent,
-      response_text: response
-    });
+    // Logghiamo la conversazione nel DB per storico futuro (opzionale)
+    try {
+      await conversationsService.log({
+        input_text: interpreted.input_text || '',
+        input_source: 'app',
+        intent: intent || 'conversation',
+        response_text: response
+      });
+    } catch (e) {
+      console.warn('Errore logging conversazione:', e);
+    }
 
     return response;
   } catch (error) {
     console.error('Errore durante l\'esecuzione dell\'intento:', error);
-    return 'Ho avuto un problema nell\'eseguire l\'azione su Supabase.';
+    return 'Ho avuto un problema tecnico nel salvare i dati. Ma la tua richiesta era chiara!';
   }
 }

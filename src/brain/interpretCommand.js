@@ -1,54 +1,61 @@
+import { buildContext } from './buildContext';
+import { buildSystemPrompt } from './systemPrompt';
+import { addToHistory, getHistory } from './conversationHistory';
+
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
-const GEMINI_MODEL = 'gemini-3.1-flash-lite';
+const GEMINI_MODEL = 'gemini-1.5-flash';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-export async function interpretCommand(text, engine = 'gemini', currentDate = new Date().toISOString()) {
-  const systemPrompt = `
- Sei l'assistente personale "Will". Il tuo compito è interpretare i comandi dell'utente in italiano e restituire SEMPRE un JSON strutturato.
- 
- Data odierna: ${currentDate}
- 
- Regole:
- 1. Capisci l'intento tra: add_event, add_note, query_events, query_notes, delete_event, delete_note, general_answer.
- 2. Estrai date e orari in formato ISO 8601. Risolvi riferimenti relativi come "domani", "lunedì prossimo", ecc.
- 3. Se l'utente vuole aggiungere un evento, usa "add_event".
- 4. Se l'utente vuole aggiungere una nota, usa "add_note".
- 5. Rispondi in modo naturale e umano nel campo "response".
- 
- Schema JSON atteso:
- {
-   "intent": "string",
-   "data": {
-     "title": "string",
-     "start_date": "ISO 8601 string",
-     "end_date": "ISO 8601 string",
-     "location": "string",
-     "description": "string",
-     "query_text": "string"
-   },
-   "response": "string"
- }
- `;
-
+export async function interpretCommand(text, engine = 'gemini') {
   try {
+    // 1. Costruisci il contesto fresco dal database
+    const context = await buildContext();
+    
+    // 2. Costruisci il system prompt con il contesto
+    const systemPrompt = buildSystemPrompt(context);
+    
+    // 3. Recupera la storia della conversazione
+    const history = getHistory();
+    
+    // Preparazione messaggi per Groq (OpenAI format)
+    const groqMessages = [
+      { role: 'system', content: systemPrompt },
+      ...history.map(h => ({ role: h.role, content: h.content })),
+      { role: 'user', content: text }
+    ];
+
+    // Preparazione messaggi per Gemini
+    const geminiMessages = [
+      {
+        role: 'user',
+        parts: [{ text: `SYSTEM_PROMPT: ${systemPrompt}\n\nCONVERSATION_HISTORY: ${JSON.stringify(history)}\n\nUSER_MESSAGE: ${text}` }]
+      }
+    ];
+
+    let responseText = '';
+
     if (engine === 'gemini') {
       const response = await fetch(GEMINI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemPrompt}\n\nComando utente: "${text}"` }] }],
-          generationConfig: { responseMimeType: 'application/json' },
+          contents: geminiMessages,
+          generationConfig: { 
+            responseMimeType: 'application/json',
+            temperature: 0.2
+          },
         }),
       });
       const result = await response.json();
-      return JSON.parse(result.candidates[0].content.parts[0].text);
+      if (!result.candidates) throw new Error(JSON.stringify(result));
+      responseText = result.candidates[0].content.parts[0].text;
     } else {
-      // Engine GROQ (Llama)
+      // Engine GROQ
       const response = await fetch(GROQ_URL, {
         method: 'POST',
         headers: {
@@ -57,21 +64,29 @@ export async function interpretCommand(text, engine = 'gemini', currentDate = ne
         },
         body: JSON.stringify({
           model: GROQ_MODEL,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: text },
-          ],
+          messages: groqMessages,
           response_format: { type: 'json_object' },
+          temperature: 0.2
         }),
       });
       const result = await response.json();
-      return JSON.parse(result.choices[0].message.content);
+      responseText = result.choices[0].message.content;
     }
+
+    const parsed = JSON.parse(responseText);
+    
+    // Salva nella storia
+    addToHistory('user', text);
+    addToHistory('assistant', parsed.response);
+    
+    return parsed;
   } catch (error) {
     console.error(`Errore durante l'interpretazione con ${engine}:`, error);
     return {
+      type: 'conversation',
       intent: 'error',
-      response: `Scusa, ho avuto un problema con ${engine}. Riprova più tardi.`,
+      response: `Scusa, ho avuto un problema tecnico. Mi sono perso un attimo.`,
     };
   }
 }
+

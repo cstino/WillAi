@@ -37,6 +37,25 @@ export const eventsService = {
       .ilike('title', `%${title}%`)
     if (error) throw error
     return data
+  },
+
+  async getByDateRange(start, end) {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .gte('start_date', start.toISOString())
+      .lte('start_date', end.toISOString())
+      .order('start_date', { ascending: true })
+    if (error) throw error
+    return data
+  },
+
+  async count() {
+    const { count, error } = await supabase
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+    if (error) throw error
+    return count
   }
 }
 
@@ -49,6 +68,16 @@ export const notesService = {
       .from('notes')
       .select('*')
       .order('created_at', { ascending: false })
+    if (error) throw error
+    return data
+  },
+
+  async getRecent(limit = 10) {
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
     if (error) throw error
     return data
   },
@@ -87,6 +116,14 @@ export const notesService = {
       .ilike('title', `%${title}%`)
     if (error) throw error
     return data
+  },
+
+  async count() {
+    const { count, error } = await supabase
+      .from('notes')
+      .select('*', { count: 'exact', head: true })
+    if (error) throw error
+    return count
   }
 }
 
