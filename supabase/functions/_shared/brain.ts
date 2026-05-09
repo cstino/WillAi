@@ -95,18 +95,21 @@ export async function executeIntent(supabase: any, interpreted: any, source: str
     } else if (intent === 'query_events') {
       const { data: events } = await supabase.from('events').select('*').order('start_date', { ascending: true });
       if (events && events.length > 0) {
-        const eventsList = events.map((e: any) => `- ${e.title} (${e.start_date})`).join('\n');
-        return `Ecco i tuoi prossimi impegni:\n${eventsList}`;
+        const eventsList = events.map((e: any) => {
+          const date = new Date(e.start_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+          return `📅 *${e.title}* - ${date}`;
+        }).join('\n');
+        return `Certamente! Ecco i tuoi prossimi impegni:\n\n${eventsList}`;
       } else {
-        return "Non ho trovato eventi nel tuo calendario.";
+        return "Non ho trovato eventi nel tuo calendario. 📭";
       }
     } else if (intent === 'query_notes') {
       const { data: notes } = await supabase.from('notes').select('*').order('created_at', { ascending: false });
       if (notes && notes.length > 0) {
-        const notesList = notes.map((n: any) => `- ${n.title}: ${n.content}`).join('\n');
-        return `Ecco le tue note:\n${notesList}`;
+        const notesList = notes.map((n: any) => `📝 *${n.title}*\n_${n.content}_`).join('\n\n');
+        return `Ecco le tue note salvate:\n\n${notesList}`;
       } else {
-        return "Non ho trovato note salvate.";
+        return "Non ho trovato note. 📭";
       }
     }
 

@@ -27,19 +27,22 @@ export async function executeIntent(interpreted) {
       case 'query_events': {
         const events = await eventsService.getAll();
         if (events && events.length > 0) {
-          const list = events.map(e => `- ${e.title} (${new Date(e.start_date).toLocaleDateString()})`).join('\n');
-          return `Ecco i tuoi impegni:\n${list}`;
+          const list = events.map(e => {
+            const date = new Date(e.start_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+            return `📅 ${e.title} - ${date}`;
+          }).join('\n');
+          return `Certamente! Ecco i tuoi impegni:\n\n${list}`;
         }
-        return "Non ho trovato eventi nel tuo calendario.";
+        return "Non ho trovato eventi nel tuo calendario. 📭";
       }
 
       case 'query_notes': {
         const notes = await notesService.getAll();
         if (notes && notes.length > 0) {
-          const list = notes.map(n => `- ${n.title}: ${n.content}`).join('\n');
-          return `Ecco le tue note:\n${list}`;
+          const list = notes.map(n => `📝 ${n.title}\n${n.content}`).join('\n\n');
+          return `Ecco le tue note salvate:\n\n${list}`;
         }
-        return "Non ho trovato note salvate.";
+        return "Non ho trovato note salvate. 📭";
       }
 
       case 'delete_event':
