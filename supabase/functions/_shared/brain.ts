@@ -112,8 +112,13 @@ export async function executeIntent(supabase: any, interpreted: any, source: str
       const { data: events } = await supabase.from('events').select('*').order('start_date', { ascending: true });
       if (events && events.length > 0) {
         const eventsList = events.map((e: any) => {
-          const date = new Date(e.start_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
-          return `📅 *${e.title}* - ${date}`;
+          const start = new Date(e.start_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+          const end = e.end_date ? new Date(e.end_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
+          
+          if (end && end !== start) {
+            return `📅 *${e.title}* - dal ${start} al ${end}`;
+          }
+          return `📅 *${e.title}* - il ${start}`;
         }).join('\n');
         return `Certamente! Ecco i tuoi prossimi impegni:\n\n${eventsList}`;
       } else {

@@ -28,8 +28,13 @@ export async function executeIntent(interpreted) {
         const events = await eventsService.getAll();
         if (events && events.length > 0) {
           const list = events.map(e => {
-            const date = new Date(e.start_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
-            return `📅 ${e.title} - ${date}`;
+            const start = new Date(e.start_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' });
+            const end = e.end_date ? new Date(e.end_date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : null;
+            
+            if (end && end !== start) {
+              return `📅 ${e.title} - dal ${start} al ${end}`;
+            }
+            return `📅 ${e.title} - il ${start}`;
           }).join('\n');
           return `Certamente! Ecco i tuoi impegni:\n\n${list}`;
         }

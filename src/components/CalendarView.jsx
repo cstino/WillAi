@@ -58,11 +58,18 @@ const CalendarView = () => {
 
   const getEventsForDay = (day) => {
     if (!day) return [];
+    const checkDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    
     return events.filter(e => {
-      const d = new Date(e.start_date);
-      return d.getDate() === day && 
-             d.getMonth() === currentDate.getMonth() && 
-             d.getFullYear() === currentDate.getFullYear();
+      const start = new Date(e.start_date);
+      const end = e.end_date ? new Date(e.end_date) : new Date(e.start_date);
+      
+      // Reset orari per il confronto solo delle date
+      const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const e_date = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      const c = new Date(checkDate.getFullYear(), checkDate.getMonth(), checkDate.getDate());
+      
+      return c >= s && c <= e_date;
     });
   };
 
