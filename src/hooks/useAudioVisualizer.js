@@ -37,13 +37,17 @@ export const useAudioVisualizer = (isListening) => {
       initAudio();
     } else {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (audioContextRef.current) audioContextRef.current.close();
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
       setAudioData(new Uint8Array(0));
     }
 
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (audioContextRef.current) audioContextRef.current.close();
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
     };
   }, [isListening]);
 
