@@ -24,22 +24,31 @@ export async function executeIntent(interpreted) {
         });
         break;
 
-      case 'query_events':
-        // Inizialmente restituiamo solo la risposta di Gemini
-        // In seguito aggiungeremo la logica di ricerca reale
-        break;
+      case 'query_events': {
+        const events = await eventsService.getAll();
+        if (events && events.length > 0) {
+          const list = events.map(e => `- ${e.title} (${new Date(e.start_date).toLocaleDateString()})`).join('\n');
+          return `Ecco i tuoi impegni:\n${list}`;
+        }
+        return "Non ho trovato eventi nel tuo calendario.";
+      }
 
-      case 'query_notes':
-        // Inizialmente restituiamo solo la risposta di Gemini
-        break;
+      case 'query_notes': {
+        const notes = await notesService.getAll();
+        if (notes && notes.length > 0) {
+          const list = notes.map(n => `- ${n.title}: ${n.content}`).join('\n');
+          return `Ecco le tue note:\n${list}`;
+        }
+        return "Non ho trovato note salvate.";
+      }
 
       case 'delete_event':
         await eventsService.deleteByTitle(data.title);
-        break;
+        return response; // Usiamo la risposta di conferma di Gemini
 
       case 'delete_note':
         await notesService.deleteByTitle(data.title);
-        break;
+        return response;
 
       default:
         // general_answer o altri intent non gestiti

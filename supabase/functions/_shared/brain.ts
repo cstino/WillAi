@@ -92,6 +92,22 @@ export async function executeIntent(supabase: any, interpreted: any, source: str
       }]);
     } else if (intent === 'delete_note') {
       await supabase.from('notes').delete().ilike('title', `%${data.title}%`);
+    } else if (intent === 'query_events') {
+      const { data: events } = await supabase.from('events').select('*').order('start_date', { ascending: true });
+      if (events && events.length > 0) {
+        const eventsList = events.map((e: any) => `- ${e.title} (${e.start_date})`).join('\n');
+        return `Ecco i tuoi prossimi impegni:\n${eventsList}`;
+      } else {
+        return "Non ho trovato eventi nel tuo calendario.";
+      }
+    } else if (intent === 'query_notes') {
+      const { data: notes } = await supabase.from('notes').select('*').order('created_at', { ascending: false });
+      if (notes && notes.length > 0) {
+        const notesList = notes.map((n: any) => `- ${n.title}: ${n.content}`).join('\n');
+        return `Ecco le tue note:\n${notesList}`;
+      } else {
+        return "Non ho trovato note salvate.";
+      }
     }
 
     await supabase.from('conversations').insert([{
