@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-bg-base: #08070C;
+  --color-bg-elevated: #0F0E14;
+  --color-bg-deep: #050409;
+
+  --color-neon-cyan: #00E5FF;
+  --color-neon-violet: #B16BFF;
+  --color-neon-pink: #FF4FB8;
+  --color-neon-lime: #B6FF4D;
+
+  /* Glass tokens */
+  --color-glass-bg: rgba(255, 255, 255, 0.04);
+  --color-glass-bg-strong: rgba(255, 255, 255, 0.08);
+  --color-glass-border: rgba(255, 255, 255, 0.10);
+  --color-glass-border-strong: rgba(255, 255, 255, 0.18);
+
+  /* Fonts */
+  --font-serif: "Instrument Serif", serif;
+  --font-sans: "General Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Text */
+  --color-text-primary: rgba(255, 255, 255, 0.96);
+  --color-text-secondary: rgba(255, 255, 255, 0.64);
+  --color-text-tertiary: rgba(255, 255, 255, 0.36);
+
+  /* Shadows */
+  --shadow-glow-cyan: 0 0 40px rgba(0, 229, 255, 0.35);
+  --shadow-glow-violet: 0 0 40px rgba(177, 107, 255, 0.35);
+  --shadow-elevation: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
+}
+
+@layer base {
+  :root {
+    background-color: var(--color-bg-base);
+    color: rgba(255, 255, 255, 0.96);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: var(--color-glass-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 24px;
+    box-shadow: 
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .aurora-blur {
+    filter: blur(120px);
+    opacity: 0.25;
+  }
+}
+
+/* Custom animations for Aurora */
+@keyframes aurora-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(10%, 15%) scale(1.1); }
+  66% { transform: translate(-10%, 5%) scale(0.9); }
+}
+
+.animate-aurora {
+  animation: aurora-float 20s ease-in-out infinite;
+}
+
+/* Grain texture utility */
+.bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  opacity: 0.04;
+  pointer-events: none;
+}
