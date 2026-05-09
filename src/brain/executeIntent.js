@@ -53,6 +53,35 @@ export async function executeIntent(interpreted) {
         await notesService.deleteByTitle(data.title);
         return response;
 
+      case 'update_event': {
+        const searchTitle = data.old_title || data.title;
+        const { error } = await supabase
+          .from('events')
+          .update({
+            title: data.title,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            location: data.location,
+            description: data.description
+          })
+          .ilike('title', `%${searchTitle}%`);
+        if (error) throw error;
+        return response;
+      }
+
+      case 'update_note': {
+        const searchTitle = data.old_title || data.title;
+        const { error } = await supabase
+          .from('notes')
+          .update({
+            title: data.title,
+            content: data.description || data.title
+          })
+          .ilike('title', `%${searchTitle}%`);
+        if (error) throw error;
+        return response;
+      }
+
       default:
         // general_answer o altri intent non gestiti
         break;

@@ -11,31 +11,30 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export async function interpretCommand(text: string, engine = 'gemini', currentDate = new Date().toISOString()) {
   const systemPrompt = `
- Sei l'assistente personale "Will". Il tuo compito è interpretare i comandi dell'utente in italiano e restituire SEMPRE un JSON strutturato.
- 
- Data odierna: ${currentDate}
- 
- Regole:
- 1. Capisci l'intento tra: add_event, add_note, query_events, query_notes, delete_event, delete_note, general_answer.
- 2. Estrai date e orari in formato ISO 8601. Risolvi riferimenti relativi come "domani", "lunedì prossimo", ecc.
- 3. Se l'utente vuole aggiungere un evento, usa "add_event".
- 4. Se l'utente vuole aggiungere una nota, usa "add_note".
- 5. Rispondi in modo naturale e umano nel campo "response".
- 
- Schema JSON atteso:
- {
-   "intent": "string",
-   "data": {
-     "title": "string",
-     "start_date": "ISO 8601 string",
-     "end_date": "ISO 8601 string",
-     "location": "string",
-     "description": "string",
-     "query_text": "string"
-   },
-   "response": "string"
- }
- `;
+  Sei l'assistente personale "Will". Il tuo compito è interpretare i comandi dell'utente in italiano e restituire SEMPRE un JSON strutturato.
+  
+  Data odierna: ${currentDate}
+  
+  Regole:
+  1. Capisci l'intento tra: add_event, add_note, query_events, query_notes, delete_event, delete_note, update_event, update_note, general_answer.
+  2. Estrai date e orari in formato ISO 8601. Risolvi riferimenti relativi come "domani", "lunedì prossimo", ecc.
+  3. Se l'utente vuole modificare qualcosa (es. "sposta", "cambia", "rinomina"), usa "update_event" o "update_note" e metti il titolo dell'elemento da cambiare in "old_title".
+  4. Rispondi in modo naturale e umano nel campo "response".
+  
+  Schema JSON atteso:
+  {
+    "intent": "string",
+    "data": {
+      "title": "string",
+      "old_title": "string",
+      "start_date": "ISO 8601 string",
+      "end_date": "ISO 8601 string",
+      "location": "string",
+      "description": "string"
+    },
+    "response": "string"
+  }
+  `;
 
   if (engine === 'gemini') {
     const response = await fetch(GEMINI_URL, {
@@ -92,6 +91,21 @@ export async function executeIntent(supabase: any, interpreted: any, source: str
       }]);
     } else if (intent === 'delete_note') {
       await supabase.from('notes').delete().ilike('title', `%${data.title}%`);
+    } else if (intent === 'update_event') {
+      const searchTitle = data.old_title || data.title;
+      await supabase.from('events').update({
+        title: data.title,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        location: data.location,
+        description: data.description
+      }).ilike('title', `%${searchTitle}%`);
+    } else if (intent === 'update_note') {
+      const searchTitle = data.old_title || data.title;
+      await supabase.from('notes').update({
+        title: data.title,
+        content: data.description || data.title
+      }).ilike('title', `%${searchTitle}%`);
     } else if (intent === 'query_events') {
       const { data: events } = await supabase.from('events').select('*').order('start_date', { ascending: true });
       if (events && events.length > 0) {
