@@ -156,10 +156,13 @@ const CalendarView = () => {
                   getEventsForDay(selectedDay).map(event => (
                     <div key={event.id} className="space-y-1">
                       <p className="font-medium text-white">{event.title}</p>
-                      <div className="flex gap-3 text-xs text-text-secondary">
+                      <div className="flex flex-wrap gap-3 text-xs text-text-secondary">
                         <span className="flex items-center gap-1">
                           <Clock size={12} /> 
                           {new Date(event.start_date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                          {event.end_date && new Date(event.end_date).getTime() !== new Date(event.start_date).getTime() && (
+                            <> - {new Date(event.end_date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</>
+                          )}
                         </span>
                         {event.location && (
                           <span className="flex items-center gap-1">

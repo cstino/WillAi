@@ -17,9 +17,10 @@ export async function interpretCommand(text: string, engine = 'gemini', currentD
   
   Regole:
   1. Capisci l'intento tra: add_event, add_note, query_events, query_notes, delete_event, delete_note, update_event, update_note, general_answer.
-  2. Estrai date e orari in formato ISO 8601 usando SEMPRE il fuso orario 'Europe/Rome' (UTC+2 in estate). Se l'utente dice "alle 9:00", intende le 09:00 italiane.
-  3. Per la modifica: se l'utente vuole spostare o cambiare un evento, usa "update_event" e metti il titolo originale in "old_title".
-  4. Rispondi in modo naturale e umano nel campo "response".
+  2. Fuso Orario: Usa SEMPRE 'Europe/Rome'. Se l'utente dice "alle 9:00", scrivi "T09:00:00". Non aggiungere o togliere ore.
+  3. Range di date: Se l'utente dice "dal 30 maggio al 2 giugno", la start_date è il 30 e la end_date è il 2 (NON il 3). "Fino al" è sempre INCLUSIVO.
+  4. Per eventi multi-giorno con orario (es. vacanza con partenza/ritorno), metti l'orario di partenza in start_date e quello di ritorno in end_date. all_day deve essere FALSE.
+  5. Rispondi in modo naturale e umano nel campo "response".
   
   Schema JSON atteso:
   {
