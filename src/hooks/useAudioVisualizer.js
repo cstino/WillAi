@@ -6,18 +6,20 @@ export const useAudioVisualizer = (isListening) => {
   const analyserRef = useRef(null);
   const sourceRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const streamRef = useRef(null);
 
   useEffect(() => {
     if (isListening) {
       const initAudio = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          streamRef.current = stream;
           audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
           analyserRef.current = audioContextRef.current.createAnalyser();
           sourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
           
           sourceRef.current.connect(analyserRef.current);
-          analyserRef.current.fftSize = 64; // Piccola dimensione per visualizzazione semplice
+          analyserRef.current.fftSize = 64; 
           
           const bufferLength = analyserRef.current.frequencyBinCount;
           const dataArray = new Uint8Array(bufferLength);
@@ -40,6 +42,10 @@ export const useAudioVisualizer = (isListening) => {
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
       }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
       setAudioData(new Uint8Array(0));
     }
 
@@ -47,6 +53,9 @@ export const useAudioVisualizer = (isListening) => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, [isListening]);
