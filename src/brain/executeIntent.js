@@ -61,6 +61,7 @@ export async function executeIntent(interpreted) {
             title: data.title,
             start_date: data.start_date,
             end_date: data.end_date,
+            all_day: data.all_day ?? false,
             location: data.location,
             description: data.description
           })

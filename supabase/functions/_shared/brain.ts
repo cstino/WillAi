@@ -29,6 +29,7 @@ export async function interpretCommand(text: string, engine = 'gemini', currentD
       "old_title": "string",
       "start_date": "ISO 8601 string",
       "end_date": "ISO 8601 string",
+      "all_day": boolean, // true se è un evento generico senza ora, false se ha un orario specifico
       "location": "string",
       "description": "string"
     },
@@ -97,6 +98,7 @@ export async function executeIntent(supabase: any, interpreted: any, source: str
         title: data.title,
         start_date: data.start_date,
         end_date: data.end_date,
+        all_day: data.all_day ?? false,
         location: data.location,
         description: data.description
       }).ilike('title', `%${searchTitle}%`);
