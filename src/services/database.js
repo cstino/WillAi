@@ -28,6 +28,15 @@ export const eventsService = {
       .delete()
       .match({ id })
     if (error) throw error
+  },
+
+  async deleteByTitle(title) {
+    const { data, error } = await supabase
+      .from('events')
+      .delete()
+      .ilike('title', `%${title}%`)
+    if (error) throw error
+    return data
   }
 }
 
@@ -69,6 +78,15 @@ export const notesService = {
       .delete()
       .match({ id })
     if (error) throw error
+  },
+
+  async deleteByTitle(title) {
+    const { data, error } = await supabase
+      .from('notes')
+      .delete()
+      .ilike('title', `%${title}%`)
+    if (error) throw error
+    return data
   }
 }
 

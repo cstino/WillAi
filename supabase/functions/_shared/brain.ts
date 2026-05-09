@@ -82,12 +82,16 @@ export async function executeIntent(supabase: any, interpreted: any, source: str
         description: data.description,
         source: source
       }]);
+    } else if (intent === 'delete_event') {
+      await supabase.from('events').delete().ilike('title', `%${data.title}%`);
     } else if (intent === 'add_note') {
       await supabase.from('notes').insert([{
         title: data.title || 'Nuova Nota',
         content: data.description || data.title,
         source: source
       }]);
+    } else if (intent === 'delete_note') {
+      await supabase.from('notes').delete().ilike('title', `%${data.title}%`);
     }
 
     await supabase.from('conversations').insert([{

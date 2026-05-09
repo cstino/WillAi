@@ -34,11 +34,11 @@ export async function executeIntent(interpreted) {
         break;
 
       case 'delete_event':
-        // Richiede ID, implementeremo in seguito
+        await eventsService.deleteByTitle(data.title);
         break;
 
       case 'delete_note':
-        // Richiede ID, implementeremo in seguito
+        await notesService.deleteByTitle(data.title);
         break;
 
       default:
