@@ -68,7 +68,7 @@ export default function ChatInputBar({
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Scrivi a Will..."
-              className="w-full bg-transparent border-0 text-sm text-white placeholder-white/30 focus:ring-0 focus:outline-none px-2"
+              className="w-full bg-transparent border-0 text-base text-white placeholder-white/30 focus:ring-0 focus:outline-none px-2"
             />
           )}
         </AnimatePresence>

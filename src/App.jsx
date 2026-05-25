@@ -154,7 +154,8 @@ function App() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="pt-12 flex-1 overflow-y-auto"
+            className="flex-1 overflow-y-auto"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
           >
             <CalendarView />
           </motion.div>
@@ -164,7 +165,8 @@ function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="pt-12 flex-1 overflow-y-auto"
+            className="flex-1 overflow-y-auto"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
           >
             <NotesView />
           </motion.div>
@@ -230,7 +232,10 @@ function App() {
       </AnimatePresence>
 
       {/* Navbar Bottom */}
-      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-16 glass-card flex items-center justify-around px-4 z-40">
+      <nav 
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-16 glass-card flex items-center justify-around px-4 z-40"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
+      >
         {[
           { id: 'assistant', icon: Sparkles, color: 'text-neon-cyan' },
           { id: 'calendar', icon: Calendar, color: 'text-neon-pink' },
