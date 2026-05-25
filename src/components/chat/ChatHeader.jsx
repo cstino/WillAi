@@ -29,10 +29,7 @@ export default function ChatHeader({ onOpenSettings }) {
   }, []);
 
   return (
-    <header 
-      className="w-full glass-card border-b border-white/10 px-4 pb-4 flex justify-between items-center backdrop-blur-xl rounded-b-2xl"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
-    >
+    <header className="w-full glass-card border border-white/10 p-4 flex justify-between items-center backdrop-blur-xl">
       <div>
         <h1 className="font-serif text-2xl text-white">Will</h1>
         <p className="text-[10px] font-mono text-neon-cyan uppercase tracking-widest">

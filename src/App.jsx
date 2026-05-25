@@ -124,7 +124,8 @@ function App() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex-1 flex flex-col max-w-md mx-auto w-full pt-4 pb-28 h-screen"
+            className="flex-1 flex flex-col max-w-md mx-auto w-full pb-36 h-[100dvh] overflow-hidden px-4"
+            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}
           >
             {/* Sticky Header */}
             <ChatHeader onOpenSettings={() => setShowSettings(true)} />
@@ -154,7 +155,7 @@ function App() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="flex-1 overflow-y-auto"
+            className="flex-1 overflow-y-auto px-4 pb-36"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
           >
             <CalendarView />
@@ -165,7 +166,7 @@ function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="flex-1 overflow-y-auto"
+            className="flex-1 overflow-y-auto px-4 pb-36"
             style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
           >
             <NotesView />
@@ -232,10 +233,7 @@ function App() {
       </AnimatePresence>
 
       {/* Navbar Bottom */}
-      <nav 
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-16 glass-card flex items-center justify-around px-4 z-40"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
-      >
+      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-16 glass-card flex items-center justify-around px-4 z-40">
         {[
           { id: 'assistant', icon: Sparkles, color: 'text-neon-cyan' },
           { id: 'calendar', icon: Calendar, color: 'text-neon-pink' },
