@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { interpretCommand, executeIntent } from "../_shared/brain.ts"
+import { processMessage } from "../_shared/brain.ts"
 
 const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
 const ALLOWED_USER_ID = 335863938
@@ -54,9 +54,12 @@ serve(async (req) => {
     if (!textToProcess) return new Response("No text", { status: 200 })
 
     // Elaborazione Brain
-    const interpreted = await interpretCommand(supabase, textToProcess)
-    interpreted.input_text = textToProcess
-    const responseText = await executeIntent(supabase, interpreted, 'telegram')
+    const result = await processMessage(supabase, {
+      text: textToProcess,
+      source: message.voice ? 'telegram_voice' : 'telegram_text',
+      engine: 'gemini'
+    });
+    const responseText = result.assistantMessage.content;
 
     // Risposta a Telegram
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {

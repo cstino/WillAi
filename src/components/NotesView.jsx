@@ -66,16 +66,26 @@ const NotesView = () => {
                 <motion.p layoutId={`content-${note.id}`} className="text-sm text-text-secondary line-clamp-2 leading-relaxed">
                   {note.content}
                 </motion.p>
-                <div className="flex items-center gap-4 mt-4 text-[10px] font-mono text-text-tertiary uppercase tracking-widest">
+                <div className="flex items-center gap-4 mt-4 text-[10px] font-mono text-text-tertiary uppercase tracking-widest flex-wrap">
                   <span className="flex items-center gap-1"><CalendarIcon size={10} /> {new Date(note.created_at).toLocaleDateString('it-IT')}</span>
                   <span className="flex items-center gap-1"><Clock size={10} /> {new Date(note.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+                  {note.memory_type && (
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold border ${
+                      note.memory_type === 'knowledge' ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' :
+                      note.memory_type === 'idea' ? 'bg-neon-violet/10 border-neon-violet/30 text-neon-violet' :
+                      note.memory_type === 'fact' ? 'bg-neon-lime/10 border-neon-lime/30 text-neon-lime' :
+                      'bg-neon-pink/10 border-neon-pink/30 text-neon-pink'
+                    }`}>
+                      {note.memory_type}
+                    </span>
+                  )}
                 </div>
               </GlassCard>
             </motion.div>
           ))
         ) : !isLoading ? (
           <div className="text-center py-20 text-text-tertiary italic">
-            Nessuna nota presente. Chiedi a Jarvis di aggiungerne una!
+            Nessuna nota presente. Chiedi a Will di aggiungerne una!
           </div>
         ) : null}
       </div>

@@ -9,7 +9,6 @@ const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
 Deno.serve(async (req) => {
   try {
-    // 1. Determina ora corrente in Europe/Rome
     const now = new Date()
     const romeTime = new Intl.DateTimeFormat('it-IT', {
       timeZone: 'Europe/Rome',
@@ -69,25 +68,31 @@ async function sendDailySummary(now: Date) {
 
   // Query oggi
   const { data: todayEvents } = await supabase
-    .from('events')
+    .from('memories')
     .select('*')
-    .gte('start_date', `${today}T00:00:00`)
-    .lte('start_date', `${today}T23:59:59`)
+    .in('memory_type', ['event', 'reminder'])
+    .gt('relevance_score', 0)
+    .gte('trigger_at', `${today}T00:00:00`)
+    .lte('trigger_at', `${today}T23:59:59`)
 
   // Query domani
   const { data: tomorrowEvents } = await supabase
-    .from('events')
+    .from('memories')
     .select('*')
-    .gte('start_date', `${tomorrow}T00:00:00`)
-    .lte('start_date', `${tomorrow}T23:59:59`)
+    .in('memory_type', ['event', 'reminder'])
+    .gt('relevance_score', 0)
+    .gte('trigger_at', `${tomorrow}T00:00:00`)
+    .lte('trigger_at', `${tomorrow}T23:59:59`)
 
   // Query note ieri
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
   const yesterdayStr = yesterday.toISOString().split('T')[0]
   const { count: notesCount } = await supabase
-    .from('notes')
+    .from('memories')
     .select('*', { count: 'exact', head: true })
+    .in('memory_type', ['knowledge', 'idea', 'fact', 'preference'])
+    .gt('relevance_score', 0)
     .gte('created_at', `${yesterdayStr}T00:00:00`)
     .lte('created_at', `${yesterdayStr}T23:59:59`)
 
@@ -101,8 +106,8 @@ async function sendDailySummary(now: Date) {
   message += `📅 *Oggi, ${new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(now)}:*\n`
   if (todayEvents && todayEvents.length > 0) {
     todayEvents.forEach(e => {
-      const time = new Date(e.start_date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-      message += `• ${e.title} ${e.all_day ? '(tutto il giorno)' : '— ' + time}\n`
+      const time = new Date(e.trigger_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+      message += `• ${e.content} — ${time}\n`
     })
   } else {
     message += `• Oggi nessun impegno in programma 🎉\n`
@@ -111,8 +116,8 @@ async function sendDailySummary(now: Date) {
   if (tomorrowEvents && tomorrowEvents.length > 0) {
     message += `\n📅 *Domani:*\n`
     tomorrowEvents.forEach(e => {
-      const time = new Date(e.start_date).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-      message += `• ${e.title} ${e.all_day ? '(tutto il giorno)' : '— ' + time}\n`
+      const time = new Date(e.trigger_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+      message += `• ${e.content} — ${time}\n`
     })
   }
 
@@ -130,22 +135,26 @@ async function sendWeeklySummary(now: Date) {
   const todayStr = now.toISOString().split('T')[0]
 
   const { data: weekEvents } = await supabase
-    .from('events')
+    .from('memories')
     .select('*')
-    .gte('start_date', `${todayStr}T00:00:00`)
-    .lte('start_date', `${weekEndStr}T23:59:59`)
-    .order('start_date', { ascending: true })
+    .in('memory_type', ['event', 'reminder'])
+    .gt('relevance_score', 0)
+    .gte('trigger_at', `${todayStr}T00:00:00`)
+    .lte('trigger_at', `${weekEndStr}T23:59:59`)
+    .order('trigger_at', { ascending: true })
 
   const { count: totalNotes } = await supabase
-    .from('notes')
+    .from('memories')
     .select('*', { count: 'exact', head: true })
+    .in('memory_type', ['knowledge', 'idea', 'fact', 'preference'])
+    .gt('relevance_score', 0)
 
   let message = `📊 *La tua settimana (${now.getDate()}-${weekEnd.getDate()} ${new Intl.DateTimeFormat('it-IT', { month: 'long' }).format(now)}):*\n`
   
   if (weekEvents && weekEvents.length > 0) {
     weekEvents.forEach(e => {
-      const date = new Intl.DateTimeFormat('it-IT', { weekday: 'long' }).format(new Date(e.start_date))
-      message += `• ${date.charAt(0).toUpperCase() + date.slice(1)}: ${e.title}\n`
+      const date = new Intl.DateTimeFormat('it-IT', { weekday: 'long' }).format(new Date(e.trigger_at))
+      message += `• ${date.charAt(0).toUpperCase() + date.slice(1)}: ${e.content}\n`
     })
   } else {
     message += `• Nessun impegno programmato per questa settimana.`
@@ -157,17 +166,16 @@ async function sendWeeklySummary(now: Date) {
 }
 
 async function sendPreEventReminders(now: Date) {
-  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000)
-  const oneHourLaterStr = oneHourLater.toISOString()
   const nowStr = now.toISOString()
 
-  // Cerca eventi che iniziano tra 55 e 65 minuti
+  // Cerca eventi che iniziano tra adesso e i prossimi 65 minuti
   const { data: upcomingEvents } = await supabase
-    .from('events')
+    .from('memories')
     .select('*')
-    .eq('all_day', false)
-    .gte('start_date', nowStr)
-    .lte('start_date', new Date(now.getTime() + 65 * 60 * 1000).toISOString())
+    .in('memory_type', ['event', 'reminder'])
+    .gt('relevance_score', 0)
+    .gte('trigger_at', nowStr)
+    .lte('trigger_at', new Date(now.getTime() + 65 * 60 * 1000).toISOString())
 
   if (!upcomingEvents) return
 
@@ -176,20 +184,19 @@ async function sendPreEventReminders(now: Date) {
     const { data: alreadySent } = await supabase
       .from('sent_notifications')
       .select('*')
-      .eq('event_id', event.id)
+      .eq('memory_id', event.id)
       .eq('notification_type', 'pre_event')
       .single()
 
     if (!alreadySent) {
-      let message = `⏰ *Tra 1 ora: ${event.title}*\n`
-      if (event.location) message += `📍 ${event.location}`
+      const message = `⏰ *Tra 1 ora: ${event.content}*\n`
       
       await sendTelegramMessage(message)
       
       // Segna come inviata
       await supabase
         .from('sent_notifications')
-        .insert([{ event_id: event.id, notification_type: 'pre_event' }])
+        .insert([{ memory_id: event.id, notification_type: 'pre_event' }])
     }
   }
 }

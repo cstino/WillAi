@@ -1,152 +1,165 @@
-import { supabase } from './supabase'
+import { supabase } from './supabase';
+
+function formatMemoryAsEvent(m) {
+  return {
+    id: m.id,
+    title: m.content,
+    start_date: m.trigger_at,
+    end_date: m.trigger_end,
+    location: '', // Location is merged in content for memory schema
+    created_at: m.created_at
+  };
+}
+
+function formatMemoryAsNote(m) {
+  const lines = m.content.split('\n');
+  const title = lines[0] || 'Nota';
+  const content = lines.slice(1).join('\n') || m.content;
+  return {
+    id: m.id,
+    title: title,
+    content: content,
+    memory_type: m.memory_type,
+    created_at: m.created_at,
+    source: m.source
+  };
+}
 
 /**
- * Gestione Eventi Calendario
+ * Gestione Eventi Calendario (Proiezioni di memories)
  */
 export const eventsService = {
   async getAll() {
     const { data, error } = await supabase
-      .from('events')
+      .from('memories')
       .select('*')
-      .order('start_date', { ascending: true })
-    if (error) throw error
-    return data
-  },
-
-  async create(event) {
-    const { data, error } = await supabase
-      .from('events')
-      .insert([event])
-      .select()
-    if (error) throw error
-    return data[0]
+      .in('memory_type', ['event', 'reminder'])
+      .not('trigger_at', 'is', null)
+      .gt('relevance_score', 0)
+      .order('trigger_at', { ascending: true });
+      
+    if (error) throw error;
+    return (data || []).map(formatMemoryAsEvent);
   },
 
   async delete(id) {
     const { error } = await supabase
-      .from('events')
+      .from('memories')
       .delete()
-      .match({ id })
-    if (error) throw error
+      .match({ id });
+    if (error) throw error;
   },
 
   async deleteByTitle(title) {
     const { data, error } = await supabase
-      .from('events')
+      .from('memories')
       .delete()
-      .ilike('title', `%${title}%`)
-    if (error) throw error
-    return data
+      .in('memory_type', ['event', 'reminder'])
+      .ilike('content', `%${title}%`);
+    if (error) throw error;
+    return data;
   },
 
   async getByDateRange(start, end) {
     const { data, error } = await supabase
-      .from('events')
+      .from('memories')
       .select('*')
-      .gte('start_date', start.toISOString())
-      .lte('start_date', end.toISOString())
-      .order('start_date', { ascending: true })
-    if (error) throw error
-    return data
+      .in('memory_type', ['event', 'reminder'])
+      .not('trigger_at', 'is', null)
+      .gt('relevance_score', 0)
+      .gte('trigger_at', start.toISOString())
+      .lte('trigger_at', end.toISOString())
+      .order('trigger_at', { ascending: true });
+      
+    if (error) throw error;
+    return (data || []).map(formatMemoryAsEvent);
   },
 
   async count() {
     const { count, error } = await supabase
-      .from('events')
+      .from('memories')
       .select('*', { count: 'exact', head: true })
-    if (error) throw error
-    return count
+      .in('memory_type', ['event', 'reminder'])
+      .gt('relevance_score', 0);
+    if (error) throw error;
+    return count;
   }
-}
+};
 
 /**
- * Gestione Note
+ * Gestione Note (Proiezioni di memories)
  */
 export const notesService = {
   async getAll() {
     const { data, error } = await supabase
-      .from('notes')
+      .from('memories')
       .select('*')
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return data
+      .in('memory_type', ['knowledge', 'idea', 'fact', 'preference'])
+      .gt('relevance_score', 0)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    return (data || []).map(formatMemoryAsNote);
   },
 
   async getRecent(limit = 10) {
     const { data, error } = await supabase
-      .from('notes')
+      .from('memories')
       .select('*')
+      .in('memory_type', ['knowledge', 'idea', 'fact', 'preference'])
+      .gt('relevance_score', 0)
       .order('created_at', { ascending: false })
-      .limit(limit)
-    if (error) throw error
-    return data
-  },
-
-  async create(note) {
-    const { data, error } = await supabase
-      .from('notes')
-      .insert([note])
-      .select()
-    if (error) throw error
-    return data[0]
-  },
-
-  async update(id, updates) {
-    const { data, error } = await supabase
-      .from('notes')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .match({ id })
-      .select()
-    if (error) throw error
-    return data[0]
+      .limit(limit);
+      
+    if (error) throw error;
+    return (data || []).map(formatMemoryAsNote);
   },
 
   async delete(id) {
     const { error } = await supabase
-      .from('notes')
+      .from('memories')
       .delete()
-      .match({ id })
-    if (error) throw error
+      .match({ id });
+    if (error) throw error;
   },
 
   async deleteByTitle(title) {
     const { data, error } = await supabase
-      .from('notes')
+      .from('memories')
       .delete()
-      .ilike('title', `%${title}%`)
-    if (error) throw error
-    return data
+      .in('memory_type', ['knowledge', 'idea', 'fact', 'preference'])
+      .ilike('content', `%${title}%`);
+    if (error) throw error;
+    return data;
   },
 
   async count() {
     const { count, error } = await supabase
-      .from('notes')
+      .from('memories')
       .select('*', { count: 'exact', head: true })
-    if (error) throw error
-    return count
+      .in('memory_type', ['knowledge', 'idea', 'fact', 'preference'])
+      .gt('relevance_score', 0);
+    if (error) throw error;
+    return count;
   }
-}
+};
 
 /**
- * Gestione Conversazioni (Log)
+ * Gestione Conversazioni (Log) - Compatibilità o non utilizzato
  */
 export const conversationsService = {
   async log(entry) {
-    const { data, error } = await supabase
-      .from('conversations')
-      .insert([entry])
-      .select()
-    if (error) throw error
-    return data[0]
+    // Non più utilizzato direttamente ma mantenuto per evitare errori di importazione
+    return entry;
   },
 
   async getRecent(limit = 10) {
     const { data, error } = await supabase
-      .from('conversations')
+      .from('chat_messages')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(limit)
-    if (error) throw error
-    return data
+      .limit(limit);
+    if (error) throw error;
+    return data;
   }
-}
+};
