@@ -124,8 +124,12 @@ function App() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex-1 flex flex-col max-w-md mx-auto w-full pb-36 h-[100dvh] overflow-hidden px-4"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}
+            className="flex-1 flex flex-col max-w-md mx-auto w-full pb-36 h-[100dvh] overflow-hidden"
+            style={{ 
+              paddingTop: 'calc(env(safe-area-inset-top) + 8px)',
+              paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1.5rem, env(safe-area-inset-right))'
+            }}
           >
             {/* Sticky Header */}
             <ChatHeader onOpenSettings={() => setShowSettings(true)} />
@@ -155,8 +159,12 @@ function App() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="flex-1 overflow-y-auto px-4 pb-36"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
+            className="flex-1 overflow-y-auto pb-36"
+            style={{ 
+              paddingTop: 'calc(env(safe-area-inset-top) + 24px)',
+              paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1.5rem, env(safe-area-inset-right))'
+            }}
           >
             <CalendarView />
           </motion.div>
@@ -166,8 +174,12 @@ function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="flex-1 overflow-y-auto px-4 pb-36"
-            style={{ paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}
+            className="flex-1 overflow-y-auto pb-36"
+            style={{ 
+              paddingTop: 'calc(env(safe-area-inset-top) + 24px)',
+              paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1.5rem, env(safe-area-inset-right))'
+            }}
           >
             <NotesView />
           </motion.div>
@@ -177,7 +189,15 @@ function App() {
       {/* Settings Modal */}
       <AnimatePresence>
         {showSettings && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{
+              paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
+              paddingRight: 'max(1.5rem, env(safe-area-inset-right))',
+              paddingTop: 'max(1.5rem, env(safe-area-inset-top))',
+              paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))'
+            }}
+          >
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
