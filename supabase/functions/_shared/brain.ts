@@ -367,7 +367,11 @@ export async function processMessage(supabase: any, { text, source, engine = 'ge
     }).catch(err => console.error('Background extraction failed:', err));
   }
   
-  await supabase.rpc('increment_memories_counter').catch(err => console.error('Failed to increment memories counter:', err));
+  try {
+    await supabase.rpc('increment_memories_counter');
+  } catch (err) {
+    console.error('Failed to increment memories counter:', err);
+  }
   
   return {
     userMessage: userMsg,

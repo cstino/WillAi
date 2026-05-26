@@ -90,7 +90,11 @@ export async function processMessage({ text, source, engine = 'gemini' }) {
   }
   
   // 9. Incrementa contatore per auto-update profilo
-  await supabase.rpc('increment_memories_counter').catch(err => console.error('Failed to increment memories counter:', err));
+  try {
+    await supabase.rpc('increment_memories_counter');
+  } catch (err) {
+    console.error('Failed to increment memories counter:', err);
+  }
   
   return {
     userMessage: userMsg,
