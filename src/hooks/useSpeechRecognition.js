@@ -17,8 +17,20 @@ export const useSpeechRecognition = (onResult) => {
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
+    recognition.onstart = () => {
+      console.log('Speech recognition started');
+      setIsListening(true);
+    };
+    
+    recognition.onend = () => {
+      console.log('Speech recognition ended');
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+    };
     
     recognition.onresult = (event) => {
       let currentTranscript = '';
@@ -27,7 +39,13 @@ export const useSpeechRecognition = (onResult) => {
       }
       setTranscript(currentTranscript);
       if (event.results[event.results.length - 1].isFinal) {
+        console.log('Speech recognition final result:', currentTranscript);
         onResult?.(currentTranscript);
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.error('Error stopping recognition on final result:', e);
+        }
       }
     };
 
@@ -36,11 +54,27 @@ export const useSpeechRecognition = (onResult) => {
 
   const startListening = useCallback(() => {
     setTranscript('');
-    recognitionRef.current?.start();
+    try {
+      recognitionRef.current?.start();
+    } catch (e) {
+      console.error('Failed to start speech recognition:', e);
+      setIsListening(true);
+    }
   }, []);
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
+    console.log('stopListening called manually');
+    setIsListening(false);
+    try {
+      recognitionRef.current?.stop();
+    } catch (e) {
+      console.warn('Error on stop():', e);
+    }
+    try {
+      recognitionRef.current?.abort();
+    } catch (e) {
+      console.warn('Error on abort():', e);
+    }
   }, []);
 
   return {
