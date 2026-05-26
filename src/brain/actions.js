@@ -26,6 +26,17 @@ export async function executeActions(actions = [], source = 'app_text') {
       if (data) createdIds.push(data.id);
     }
     
+    else if (action.type === 'update_news_preferences') {
+      const updates = {};
+      if (action.news_topics) updates.news_topics = action.news_topics;
+      if (action.news_delivery_time) updates.news_delivery_time = action.news_delivery_time;
+      
+      await supabase
+        .from('user_profile')
+        .update(updates)
+        .eq('id', '00000000-0000-0000-0000-000000000000');
+    }
+    
     else if (action.type === 'delete_memory') {
       // Cancellazione solo su richiesta esplicita dell'utente
       await supabase.from('memories').delete().eq('id', action.id);

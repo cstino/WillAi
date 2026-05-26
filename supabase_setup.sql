@@ -106,6 +106,10 @@ CREATE TABLE IF NOT EXISTS user_profile (
   -- Memoria procedurale (come Will deve comportarsi)
   procedural_rules JSONB DEFAULT '[]'::jsonb,
   
+  -- Gestione notizie pianificate
+  news_topics TEXT[] DEFAULT '{}',
+  news_delivery_time TIME DEFAULT '07:30:00',
+  
   last_heartbeat_at TIMESTAMPTZ,
   memories_since_last_profile_update INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),

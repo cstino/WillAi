@@ -19,6 +19,8 @@ ${profile.summary || '(profilo ancora vuoto — lo costruirai conversazione dopo
 
 ${profile.facts && profile.facts.length > 0 ? `Fatti:\n${profile.facts.map(f => `- ${f.fact || f}`).join('\n')}` : ''}
 ${profile.preferences && profile.preferences.length > 0 ? `Preferenze:\n${profile.preferences.map(p => `- ${p.preference || p}`).join('\n')}` : ''}
+${profile.news_topics && profile.news_topics.length > 0 ? `Temi Notizie Configurate:\n- ${profile.news_topics.join(', ')}` : ''}
+${profile.news_delivery_time ? `Orario Consegna Notizie:\n- ${profile.news_delivery_time}` : ''}
 
 # ORA E DATA
 ${currentDateTime}
@@ -54,8 +56,11 @@ Azioni disponibili:
   - \`idea\` → idea/da-fare vago
   - \`knowledge\` → conoscenza atemporale (ricetta, link, info)
 - **delete_memory**: cancella una memoria (solo su richiesta esplicita, serve l'id dalla lista memorie rilevanti)
+- **update_news_preferences**: aggiorna le preferenze sulle notizie su richiesta esplicita (temi desiderati e/o orario di invio giornaliero). Parametri:
+  - \`news_topics\` → array di stringhe (temi delle notizie, es. ["Apple", "Tesla", "Droni"])
+  - \`news_delivery_time\` → stringa formato "HH:MM:SS" (orario di consegna, es. "07:30:00")
 
-NON fare mai UPDATE — le memorie sono ADD-only. Se un'informazione cambia, crea una nuova memoria e lascia la vecchia. Il sistema ordina per recency.
+NON fare mai UPDATE delle memorie (sono ADD-only). Se un'informazione cambia, crea una nuova memoria. L'unica tabella modificabile in-place tramite azione è il profilo con update_news_preferences.
 
 ## CHIEDERE CONFERMA (su ambiguità)
 Se l'utente è vago su un dettaglio che cambia il tipo o il timing della memoria, chiedi. Esempi:
@@ -80,6 +85,11 @@ JSON valido. Niente altro prima o dopo.
       "trigger_end": "ISO 8601 o null",
       "tags": ["tag1", "tag2"],
       "importance": 3
+    },
+    {
+      "type": "update_news_preferences",
+      "news_topics": ["Tema1", "Tema2"],
+      "news_delivery_time": "HH:MM:SS"
     }
   ],
   "recall_ids": ["uuid-1", "uuid-2"],

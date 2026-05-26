@@ -24,7 +24,22 @@ Deno.serve(async (req) => {
     const minute = parseInt(romeTime.find(p => p.type === 'minute')?.value || '0')
     const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'Europe/Rome' }).format(now)
 
-    console.log(`Esecuzione notifica alle ore ${hour}:${minute} (${weekday})`)
+    // --- QUERY NEWS PREFERENCES ---
+    const { data: profile } = await supabase
+      .from('user_profile')
+      .select('news_topics, news_delivery_time')
+      .eq('id', '00000000-0000-0000-0000-000000000000')
+      .single()
+
+    if (profile && profile.news_delivery_time && profile.news_topics && profile.news_topics.length > 0) {
+      const [prefHour, prefMin] = profile.news_delivery_time.split(':').map((v: string) => parseInt(v))
+      const currentTotalMin = hour * 60 + minute
+      const targetTotalMin = prefHour * 60 + prefMin
+
+      if (currentTotalMin >= targetTotalMin && currentTotalMin < targetTotalMin + 15) {
+        await sendNewsDigest(now, profile.news_topics)
+      }
+    }
 
     // --- A. RIEPILOGO MATTUTINO (08:00) ---
     if (hour === 8 && minute < 15) {
@@ -199,4 +214,131 @@ async function sendPreEventReminders(now: Date) {
         .insert([{ memory_id: event.id, notification_type: 'pre_event' }])
     }
   }
+}
+
+async function sendNewsDigest(now: Date, topics: string[]) {
+  const todayStr = now.toISOString().split('T')[0]
+  
+  // Check if already sent today
+  const { data: alreadySent } = await supabase
+    .from('sent_notifications')
+    .select('*')
+    .eq('notification_type', 'news_digest')
+    .gte('sent_at', `${todayStr}T00:00:00`)
+    .lte('sent_at', `${todayStr}T23:59:59`)
+    .limit(1)
+    
+  if (alreadySent && alreadySent.length > 0) {
+    console.log('News digest already sent today.')
+    return
+  }
+  
+  console.log(`Generating news digest for topics: ${topics.join(', ')}`)
+  
+  // Fetch RSS feeds for each topic in parallel
+  const feeds = await Promise.all(
+    topics.map(async (topic) => {
+      try {
+        const url = `https://news.google.com/rss/search?q=${encodeURIComponent(topic)}&hl=it&gl=IT&ceid=IT:it`
+        const resp = await fetch(url)
+        if (!resp.ok) return { topic, items: [] }
+        
+        const xml = await resp.text()
+        const items: any[] = []
+        const itemRegex = /<item>([\s\S]*?)<\/item>/g
+        let match
+        
+        while ((match = itemRegex.exec(xml)) !== null && items.length < 4) {
+          const itemContent = match[1]
+          const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(itemContent)
+          const linkMatch = /<link>([\s\S]*?)<\/link>/.exec(itemContent)
+          const sourceMatch = /<source[\s\S]*?>([\s\S]*?)<\/source>/.exec(itemContent)
+          
+          items.push({
+            title: titleMatch ? titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').trim() : '',
+            link: linkMatch ? linkMatch[1].trim() : '',
+            source: sourceMatch ? sourceMatch[1].trim() : ''
+          })
+        }
+        return { topic, items }
+      } catch (e) {
+        console.error(`Failed to fetch news for topic ${topic}:`, e)
+        return { topic, items: [] }
+      }
+    })
+  )
+  
+  // Format the feed items as text for Gemini
+  let feedText = ''
+  feeds.forEach(f => {
+    feedText += `### TEMA: ${f.topic}\n`
+    if (f.items.length === 0) {
+      feedText += `Nessuna notizia trovata.\n\n`
+    } else {
+      f.items.forEach((item, idx) => {
+        feedText += `${idx + 1}. [${item.source}] ${item.title}\n   Link: ${item.link}\n`
+      })
+      feedText += '\n'
+    }
+  })
+  
+  // Call Gemini to synthesize a beautiful digest
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY') || ''
+  const geminiModel = 'gemini-2.5-flash'
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`
+  
+  const systemPrompt = `
+Sei Will, l'assistente personale di Cristiano.
+Cristiano ha chiesto un briefing sulle ultime notizie del giorno per i suoi temi di interesse.
+Ecco le notizie grezze raccolte dai feed RSS.
+Compila un briefing notizie del giorno personalizzato, interessante, chiaro e scritto in un tono caldo, empatico e colloquiale (in italiano).
+Fai un breve riassunto (1-2 frasi) per le notizie principali di ogni tema, e includi il link originale per ciascuna usando la sintassi Markdown [Titolo](link) o indicandolo chiaramente.
+Mantieni il messaggio entro le capacità di un messaggio Telegram (pulito, ben spaziato, con elenchi puntati ed emoji).
+  `.trim()
+  
+  let digestContent = ''
+  try {
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${systemPrompt}\n\nNOTIZIE RSS DI OGGI:\n${feedText}` }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.3
+        }
+      })
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      digestContent = data.candidates[0].content.parts[0].text
+    } else {
+      throw new Error(`Gemini status ${response.status}`)
+    }
+  } catch (e: any) {
+    console.error('Failed to generate news digest via Gemini:', e)
+    digestContent = `📰 *Il tuo briefing notizie di oggi (Fallback)*\n\n`
+    feeds.forEach(f => {
+      digestContent += `*${f.topic}*:\n`
+      f.items.forEach(item => {
+        digestContent += `• [${item.source}] [${item.title}](${item.link})\n`
+      })
+      digestContent += '\n'
+    })
+  }
+  
+  const finalMessage = `📰 *WILL NEWS DIGEST*\n\n${digestContent}`
+  
+  // Send telegram message
+  await sendTelegramMessage(finalMessage)
+  
+  // Log in sent_notifications
+  await supabase
+    .from('sent_notifications')
+    .insert([{ notification_type: 'news_digest' }])
 }
