@@ -1,4 +1,4 @@
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 async function generateEmbedding(text: string): Promise<number[]> {
