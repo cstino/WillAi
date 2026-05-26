@@ -2,17 +2,16 @@ import React, { useState, useEffect } from 'react';
 import AuroraBackground from './components/AuroraBackground';
 import CalendarView from './components/CalendarView';
 import NotesView from './components/NotesView';
-import ChatHeader from './components/chat/ChatHeader';
+import ChatInputBar from './components/chat/ChatInputBar';
 import MessageList from './components/chat/MessageList';
 import SuggestionChips from './components/chat/SuggestionChips';
-import ChatInputBar from './components/chat/ChatInputBar';
 import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useAudioVisualizer } from './hooks/useAudioVisualizer';
 import { processMessage } from './brain/processMessage';
 import { speak } from './services/speechSynthesis';
 import { supabase } from './services/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Calendar, FileText, X } from 'lucide-react';
+import { Sparkles, Calendar, FileText, X, Menu, Settings } from 'lucide-react';
 
 function App() {
   const [view, setView] = useState('assistant'); // 'assistant' | 'calendar' | 'notes'
@@ -21,6 +20,8 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [engine, setEngine] = useState('gemini'); // 'gemini' | 'llama'
   const [showSettings, setShowSettings] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [memoryCount, setMemoryCount] = useState(0);
 
   // Load chat messages on mount
   useEffect(() => {
@@ -46,6 +47,30 @@ function App() {
       }
     }
     loadChatHistory();
+  }, []);
+
+  // Fetch memory count and subscribe to changes
+  useEffect(() => {
+    async function getCount() {
+      const { count, error } = await supabase
+        .from('memories')
+        .select('*', { count: 'exact', head: true })
+        .gt('relevance_score', 0);
+      if (!error && count !== null) {
+        setMemoryCount(count);
+      }
+    }
+    
+    getCount();
+    
+    const channel = supabase
+      .channel('memories-count-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'memories' }, getCount)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const triggerGreeting = async () => {
@@ -114,8 +139,35 @@ function App() {
   const audioData = useAudioVisualizer(isListening);
 
   return (
-    <div className="relative min-h-screen text-white overflow-hidden font-sans flex flex-col">
+    <div className="relative min-h-screen text-white overflow-hidden font-sans flex flex-col animate-fade-in bg-bg-base">
       <AuroraBackground />
+      
+      {/* Global Header */}
+      <header 
+        className="fixed top-0 left-0 right-0 z-40 bg-bg-base/30 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6"
+        style={{ 
+          height: 'calc(env(safe-area-inset-top) + 56px)',
+          paddingTop: 'env(safe-area-inset-top)'
+        }}
+      >
+        <button 
+          onClick={() => setShowSidebar(true)}
+          className="p-2 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-colors"
+        >
+          <Menu size={22} />
+        </button>
+        
+        <h1 className="font-serif text-xl text-white tracking-wide">
+          {view === 'assistant' ? 'Will' : view === 'calendar' ? 'Calendario' : 'Note'}
+        </h1>
+        
+        <button 
+          onClick={() => setShowSettings(true)} 
+          className="p-2 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-colors"
+        >
+          <Settings size={20} />
+        </button>
+      </header>
       
       <AnimatePresence mode="wait">
         {view === 'assistant' ? (
@@ -124,16 +176,15 @@ function App() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex-1 flex flex-col max-w-md mx-auto w-full pb-36 h-[100dvh] overflow-hidden"
+            className="flex-1 flex flex-col max-w-md mx-auto w-full overflow-hidden"
             style={{ 
-              paddingTop: 'calc(env(safe-area-inset-top) + 8px)',
+              paddingTop: 'calc(env(safe-area-inset-top) + 64px)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
               paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
-              paddingRight: 'max(1.5rem, env(safe-area-inset-right))'
+              paddingRight: 'max(1.5rem, env(safe-area-inset-right))',
+              height: '100dvh'
             }}
           >
-            {/* Sticky Header */}
-            <ChatHeader onOpenSettings={() => setShowSettings(true)} />
-            
             {/* Chat Area */}
             <MessageList messages={messages} isThinking={isThinking} />
             
@@ -159,9 +210,10 @@ function App() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="flex-1 overflow-y-auto pb-36"
+            className="flex-1 overflow-y-auto"
             style={{ 
-              paddingTop: 'calc(env(safe-area-inset-top) + 24px)',
+              paddingTop: 'calc(env(safe-area-inset-top) + 72px)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)',
               paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
               paddingRight: 'max(1.5rem, env(safe-area-inset-right))'
             }}
@@ -174,9 +226,10 @@ function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="flex-1 overflow-y-auto pb-36"
+            className="flex-1 overflow-y-auto"
             style={{ 
-              paddingTop: 'calc(env(safe-area-inset-top) + 24px)',
+              paddingTop: 'calc(env(safe-area-inset-top) + 72px)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)',
               paddingLeft: 'max(1.5rem, env(safe-area-inset-left))',
               paddingRight: 'max(1.5rem, env(safe-area-inset-right))'
             }}
@@ -210,7 +263,7 @@ function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-sm glass-card p-6 relative z-10 border border-white/10 rounded-2xl"
+              className="w-full max-w-sm glass-card p-6 relative z-10 border border-white/10 rounded-2xl animate-scale-up"
             >
               <button 
                 onClick={() => setShowSettings(false)}
@@ -228,7 +281,7 @@ function App() {
                   </label>
                   <div className="flex gap-2">
                     {[
-                      { id: 'gemini', label: 'Gemini 1.5 Flash', desc: 'Veloce e strutturato' },
+                      { id: 'gemini', label: 'Gemini 2.5 Flash', desc: 'Veloce e strutturato' },
                       { id: 'llama', label: 'Llama 3.3 (Groq)', desc: 'Ragionamento avanzato' }
                     ].map((opt) => (
                       <button
@@ -252,34 +305,87 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Navbar Bottom */}
-      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-16 glass-card flex items-center justify-around px-4 z-40">
-        {[
-          { id: 'assistant', icon: Sparkles, color: 'text-neon-cyan' },
-          { id: 'calendar', icon: Calendar, color: 'text-neon-pink' },
-          { id: 'notes', icon: FileText, color: 'text-neon-violet' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setView(tab.id)}
-            className="relative p-3 transition-colors duration-300"
-          >
-            {view === tab.id && (
-              <motion.div
-                layoutId="nav-pill"
-                className="absolute inset-0 bg-white/5 rounded-xl border border-white/10"
-                transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-              />
-            )}
-            <tab.icon 
-              size={24} 
-              className={`relative z-10 transition-colors duration-300 ${
-                view === tab.id ? tab.color : 'text-white/30'
-              }`}
+      {/* Sidebar Drawer */}
+      <AnimatePresence>
+        {showSidebar && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSidebar(false)}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             />
-          </button>
-        ))}
-      </nav>
+            
+            {/* Drawer Content */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[80vw] bg-[#0c0b11]/95 border-r border-white/5 backdrop-blur-2xl flex flex-col p-6 text-white"
+              style={{
+                paddingTop: 'calc(env(safe-area-inset-top) + 24px)',
+                paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)'
+              }}
+            >
+              {/* Drawer Header */}
+              <div className="mb-8">
+                <h2 className="font-serif text-3xl">Will</h2>
+                <div className="flex items-center gap-1.5 mt-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
+                  <span className="text-[10px] font-mono text-white/50 uppercase tracking-wider">
+                    {memoryCount} ricordi salvati
+                  </span>
+                </div>
+              </div>
+              
+              {/* Navigation Links */}
+              <nav className="flex-1 space-y-2">
+                {[
+                  { id: 'assistant', label: 'Chat Assistente', icon: Sparkles, color: 'text-neon-cyan' },
+                  { id: 'calendar', label: 'Calendario', icon: Calendar, color: 'text-neon-pink' },
+                  { id: 'notes', label: 'Le mie Note', icon: FileText, color: 'text-neon-violet' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setView(item.id);
+                      setShowSidebar(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left ${
+                      view === item.id 
+                        ? 'bg-white/10 border border-white/10 font-semibold' 
+                        : 'hover:bg-white/5 border border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <item.icon size={18} className={item.color} />
+                    <span className="text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+              
+              {/* Drawer Footer */}
+              <div className="border-t border-white/5 pt-4 flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setShowSettings(true);
+                    setShowSidebar(false);
+                  }}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-white/5 opacity-70 hover:opacity-100 text-left text-sm transition-all"
+                >
+                  <Settings size={16} />
+                  <span>Impostazioni</span>
+                </button>
+                <div className="px-4 text-[10px] font-mono text-white/30 uppercase tracking-widest">
+                  Cristiano · Will v2.0
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
